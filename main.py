@@ -13,9 +13,7 @@ if __name__ == "__main__":
     user_input = input("User Input: ")
     # 记录历史
     try:
-        history.record_history(user_input, "你好，有什么可以帮你的吗？")
-        print("历史记录已更新。")   
-        history.save_history()
+        history.save_exchange(user_input, "这是一个模拟的 Agent 输出。")
         print("历史记录已保存到文件。")
     except Exception as e:
         print("保存历史记录时出错：", e)
