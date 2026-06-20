@@ -49,6 +49,3 @@ def clear_history() -> None:
     HISTORY_FILE.write_text('', encoding='utf-8')
 
 
-if __name__ == '__main__':
-    save_exchange("你好", "你好，有什么可以帮你的吗？")
-    print(get_history())
