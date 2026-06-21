@@ -43,6 +43,11 @@ def get_history() -> list[dict]:
                 continue
     return history
 
+def limit_history(max_records: int = 100) -> list[dict]:
+    """获取最近的 N 条历史记录，默认 100 条。"""
+    history = get_history()
+    return history[-max_records:]
+
 
 def clear_history() -> None:
     """清空历史记录。"""

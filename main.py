@@ -1,9 +1,9 @@
-from app import config
-from app import history
+from app import history,config
 from rich.console import Console
 import time
 import asyncio
 from app.api_client import *
+from app.llm_client import *
 
 console = Console()
 #text
@@ -53,15 +53,38 @@ class Day02:
         console.print(result, style="magenta")
         end = time.perf_counter()
         print(f"异步POST请求耗时: {end - start:.2f} 秒")
+    
+    def run() -> None:
+        timeit_sync("https://jsonplaceholder.typicode.com/posts/1")
+        history.clear_history()  # 删除最后一条历史记录
+        Day02().demo_sync()    
+        print("\n" + "="*50 + "\n")
+        asyncio.run(Day02().demo_post_async())
+        print("\n" + "="*50 + "\n")
+        asyncio.run(Day02().demo_async())
 
+class Day03 :
+    def demo01(self)->None:
+        llm_config =config.load_config()
+        llm_client = LLMClient(
+            api_key=llm_config.get("api_key"),
+            base_url=llm_config.get("base_url"),
+            model=llm_config.get("model_id"),
+        )
+        
+        #回话并且打印
+        reply=asyncio.run(llm_client.chat("你好，我是Jade", "你是一个AI助手"))
+        print("AI 回复:", reply)
+        history.save_exchange("你好，我是Jade", reply)
+        print("====="*30)
+        messages = llm_client.build_messages_from_history(history.get_history())
+        
+        messages.append({"role": "user", "content": "我是谁？"})
+        reply=asyncio.run(llm_client.chat_multi(messages))
+        print("AI 回复:", reply)
+        print("====="*30)
+        history.save_exchange("我是谁？", reply)
+        
 
 if __name__ == "__main__":
-    
-    ##Day02 text
-    timeit_sync("https://jsonplaceholder.typicode.com/posts/1")
-    history.clear_history()  # 删除最后一条历史记录
-    Day02().demo_sync()    
-    print("\n" + "="*50 + "\n")
-    asyncio.run(Day02().demo_post_async())
-    print("\n" + "="*50 + "\n")
-    asyncio.run(Day02().demo_async())
+    Day03().demo01()
