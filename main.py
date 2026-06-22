@@ -2,12 +2,15 @@ from app import history,config
 from rich.console import Console
 import time
 import asyncio
+from typing import Callable, Awaitable
+import functools
 from app.api_client import *
 from app.llm_client import *
 
 console = Console()
 #text
 payload = {"User": "HuangJUe", "Message": "Hello, World!"}
+
 
 def day01()->None:
     # 加载配置
@@ -64,27 +67,87 @@ class Day02:
         asyncio.run(Day02().demo_async())
 
 class Day03 :
-    def demo01(self)->None:
+    def __init__(self):
         llm_config =config.load_config()
-        llm_client = LLMClient(
+        self.llm_client = LLMClient(
             api_key=llm_config.get("api_key"),
             base_url=llm_config.get("base_url"),
             model=llm_config.get("model_id"),
         )
-        
+    
+    def demo01(self)->None:
+
         #回话并且打印
-        reply=asyncio.run(llm_client.chat("你好，我是Jade", "你是一个AI助手"))
+        reply=asyncio.run(self.llm_client.async_chat("你好，我是Jade", "你是一个AI助手"))
         print("AI 回复:", reply)
         history.save_exchange("你好，我是Jade", reply)
         print("====="*30)
-        messages = llm_client.build_messages_from_history(history.get_history())
+        messages = self.llm_client.build_messages_from_history(history.get_history())
         
         messages.append({"role": "user", "content": "我是谁？"})
-        reply=asyncio.run(llm_client.chat_multi(messages))
+        reply=asyncio.run(self.llm_client.async_chat(messages))
         print("AI 回复:", reply)
         print("====="*30)
         history.save_exchange("我是谁？", reply)
+
+class Day04:
+    def __init__(self):
+        llm_config =config.load_config()
+        self.llm_client = LLMClient(
+            api_key=llm_config.get("api_key"),
+            base_url=llm_config.get("base_url"),
+            model=llm_config.get("model_id"),
+        )
+    
+    #异步函数计时器装饰器
+    def async_timer(func:Callable[...,Awaitable]):
+        @functools.wraps(func)
+        async def wapper(*args,**kwargs)->Any:
+            start = time.perf_counter()
+            result = await func(*args,**kwargs)
+            elapse = time.perf_counter()-start
+            print(f"{func.__name__} 耗时: {elapse:.2f} 秒")
+            return result
+        return wapper
+    
+    
+    @async_timer
+    async def run_serial(self,questions : list[str])->list[tuple[str,str]]:
+        result = []
+        for q in questions:
+            reply = await self.llm_client.async_chat(q, "你是一个AI助手")
+            result.append((q, reply))            
+        return result
+    
+    @async_timer
+    async def run_concurrent(self,client:LLMClient, questions:list[str])->list[tuple[str,str]]:
+        #并发执行
+        tasks = [client.async_chat(q, "你是一个AI助手") for q in questions]
+        replies = await asyncio.gather(*tasks)
+        print(f"问题: {questions}\n回复: {replies}\n{'='*30}")
+        return list(zip(questions, replies))
+    
+    async def run(self)->None:
+        
+        questions = [
+            "什么是人工智能？",
+            "Python 的 asyncio 是什么？",
+            "如何提高学习效率？",
+            "未来十年科技的发展趋势是什么？",
+            "你能否推荐一些好书吗？"
+        ]
+    
+        print("=== 串行执行 ===")
+        result = await Day04().run_serial(questions)
+        print("\n=== 并发执行 ===")
+        result =await Day04().run_concurrent(self.llm_client, questions)
+        for q, r in result:
+            history.save_exchange(q, r)
+            print(f"问题: {q}\n回复: {r}\n{'='*30}")
+        
         
 
 if __name__ == "__main__":
-    Day03().demo01()
+    #Day03().demo01()
+    
+    asyncio.run(Day04().run())
